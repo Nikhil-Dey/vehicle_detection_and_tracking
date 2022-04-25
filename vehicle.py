@@ -12,15 +12,15 @@ def centroid(x,y,w,h):
     cy = y + y1
     return cx, cy
 
-def estimateSpeed(location1, location2):
-	d_pixels = math.sqrt(abs(math.pow(location2[0] - location1[0], 2)) + abs(math.pow(location2[1] - location1[1], 2)))
-	# ppm = location2[2] / carWidht
-	ppm = 8.8
-	d_meters = d_pixels / ppm
-	#print("d_pixels=" + str(d_pixels), "d_meters=" + str(d_meters))
-	fps = 18
-	speed = d_meters * fps * 3.6
-	return speed
+# def estimateSpeed(location1, location2):
+# 	d_pixels = math.sqrt(abs(math.pow(location2[0] - location1[0], 2)) + abs(math.pow(location2[1] - location1[1], 2)))
+# 	# ppm = location2[2] / carWidht
+# 	ppm = 8.8
+# 	d_meters = d_pixels / ppm
+# 	#print("d_pixels=" + str(d_pixels), "d_meters=" + str(d_meters))
+# 	fps = 18
+# 	speed = d_meters * fps * 3.6
+# 	return speed
 
 detect = []
 offset = 6
@@ -37,10 +37,12 @@ tracker = EuclideanDistTracker()
 cap = cv2.VideoCapture("video.mp4")
 
 # Object detection from Stable camera
-#object_detector = cv2.createBackgroundSubtractorMOG2(history=100, varThreshold=80)
-object_detector = cv2.createBackgroundSubtractorKNN()
+object_detector = cv2.createBackgroundSubtractorMOG2(history=100, varThreshold=80)
+# object_detector = cv2.createBackgroundSubtractorKNN()
 
-speed = [None] * 500
+# speed = [None] * 500
+
+#out = cv2.VideoWriter('outpy.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 10,(720,1280))
 while True:
     ret, frame = cap.read()
 
@@ -70,8 +72,9 @@ while True:
     # 2. Object Tracking
     boxes_ids = tracker.update(detections)
     for box_id in boxes_ids:
-        x, y, w, h, id = box_id
+        x, y, w, h, id, speed = box_id
         cv2.putText(frame, str(id), (x, y - 15), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
+        cv2.putText(frame, str(speed) + "km/hr", (x + 40, y - 15), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
 
         center = centroid(x,y,w,h)
@@ -86,12 +89,12 @@ while True:
         #         detect.remove((i,j))
         #         print("vehicle counter:" + str(counter))
         for (i,j) in detect:
-            if j<(above_line_position + offset) and j>(above_line_position - offset):
+            if j<=(above_line_position + offset) and j>=(above_line_position - offset):
                 location1[id] = (i,j)
                 cv2.line(frame, (180, above_line_position), (1100, above_line_position), (127,0,255),3)
 
 
-            if j<(below_line_position + offset) and j>(below_line_position - offset):
+            if j<=(below_line_position + offset) and j>=(below_line_position - offset):
                 location2[id] = (i,j)
                 counter += 1
                 cv2.line(frame, (25, below_line_position), (1200, below_line_position), (255,0,127),3)
@@ -99,23 +102,23 @@ while True:
                 detect.remove((i,j))
 
 
-    for key in set(location1) & set(location2):
-        [x1, y1] = location1[key]
-        [x2, y2] = location2[key]
+    # for key in set(location1) & set(location2):
+    #     [x1, y1] = location1[key]
+    #     [x2, y2] = location2[key]
 
-        if [x1, y1] != [x2, y2]:
-            if (speed[key] == None or speed[key] == 0) and y1 >= 275 and y1 <= 285:
-                speed[key] = estimateSpeed([x1, y1], [x2, y2])
+    #     if [x1, y1] != [x2, y2]:
+    #         if (speed[key] == None or speed[key] == 0) and y1 >= 275 and y1 <= 285:
+    #             speed[key] = estimateSpeed([x1, y1], [x2, y2])
 
-            #if y1 > 275 and y1 < 285:
-            if speed[key] != None:
-                cv2.putText(frame, str(int(speed[key])) + " km/hr", (int(x1 + 10), int(y1-5)),cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+    #         #if y1 > 275 and y1 < 285:
+    #         if speed[key] != None:
+    #             cv2.putText(frame, str(int(speed[key])) + " km/hr", (int(x1 + 10), int(y1-5)),cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
     
     cv2.putText(frame, "VEHICLE COUNTER :" + str(counter), (550,70), cv2.FONT_HERSHEY_SIMPLEX,2,(0,0,255),5)
 
-    # cv2.imshow("roi", roi)
+
     cv2.imshow("Frame", frame)
-    #cv2.imshow("Mask", mask)
+
 
     key = cv2.waitKey(30)
     if key == 13:
